@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>منصة التعدين التجريبية</title>
+<title>منصة التعدين </title>
 <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700;800&family=Cairo:wght@400;600;800&family=Tajawal:wght@400;500;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#eef1f5;--card:#fff;--ink:#12223d;--mut:#6b7a92;--acc:#e8a200;--ok:#1b9a68;--bad:#d24545;--hd:#0d2342;--rad:10px;--line:color-mix(in srgb,var(--ink) 15%,transparent);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -57,7 +57,7 @@ button:active,.btn:active{transform:scale(.96)}
 </style>
 </head>
 <body>
-<div class="sim">نسخة تجريبية (محاكاة): لا يوجد تعدين حقيقي ولا أموال حقيقية، وكل طرق الدفع تجريبية</div>
+<div class="sim">أهلا بك في Bitcoin Mining Platform</div>
 <div id="toast"></div><div class="wrap"><div id="app"></div><p class="muted" id="ft" style="text-align:center;margin-top:1rem"></p></div>
 <script>
 var KEY="btcdemo4",mem=null,view="user",tab="home",atab=0,AI=false,MS=null,tc=0,bc=0,bt=null,pr=0,pg="login",flash="";
@@ -66,7 +66,7 @@ th:{auto:true,hd:"#0d2342",acc:"#e8a200",bg:"#eef1f5",card:"#ffffff",ink:"#12223
 show:{plans:true,dep:true,wd:true,hist:true}},
 users:[],plans:[{id:1,name:"مبتدئ",hash:10,price:50,on:true},{id:2,name:"متوسط",hash:50,price:200,on:true},{id:3,name:"محترف",hash:200,price:700,on:true}],
 coins:[{id:"BTC",name:"Bitcoin",price:65000,rate:2e-8,col:"#f7931a",on:true},{id:"ETH",name:"Ethereum",price:3200,rate:4e-7,col:"#627eea",on:true},{id:"LTC",name:"Litecoin",price:85,rate:1.5e-5,col:"#a6a9aa",on:true},{id:"DOGE",name:"Dogecoin",price:0.15,rate:0.008,col:"#c2a633",on:true}],
-methods:[{id:1,name:"شام كاش (تجريبي)",addr:"DEMO-SHAMCASH-0000",dep:true,wd:true,min:10,fee:1,on:true},{id:2,name:"بنك بيمو السعودي الفرنسي (تجريبي)",addr:"DEMO-BEMO-IBAN-0000",dep:true,wd:true,min:20,fee:1.5,on:true},{id:3,name:"بنك سوريا والمهجر (تجريبي)",addr:"DEMO-BSM-ACCOUNT-0000",dep:true,wd:true,min:20,fee:1.5,on:true},{id:4,name:"USDT TRC20 (تجريبي)",addr:"DEMO-TRC20-ADDRESS-0000",dep:true,wd:true,min:10,fee:1,on:true},{id:5,name:"Bitcoin (تجريبي)",addr:"DEMO-BTC-ADDRESS-0000",dep:true,wd:true,min:20,fee:2,on:true}],
+methods:[{id:1,name:"Sham Cash",addr:"DEMO-SHAMCASH-0000",dep:true,wd:true,min:10,fee:1,on:true},{id:2,name:"بنك بيمو السعودي الفرنسي (تجريبي)",addr:"DEMO-BEMO-IBAN-0000",dep:true,wd:true,min:20,fee:1.5,on:true},{id:3,name:"بنك سوريا والمهجر (تجريبي)",addr:"DEMO-BSM-ACCOUNT-0000",dep:true,wd:true,min:20,fee:1.5,on:true},{id:4,name:"USDT TRC20 (تجريبي)",addr:"DEMO-TRC20-ADDRESS-0000",dep:true,wd:true,min:10,fee:1,on:true},{id:5,name:"Bitcoin (تجريبي)",addr:"DEMO-BTC-ADDRESS-0000",dep:true,wd:true,min:20,fee:2,on:true}],
 dep:[],wd:[],tx:[],admin:{u:"admin",p:"admin123"},me:null};
 var PRE=[{n:"فاتح",hd:"#0d2342",acc:"#e8a200",bg:"#eef1f5",card:"#ffffff",ink:"#12223d"},{n:"داكن",hd:"#0b1220",acc:"#35d0a0",bg:"#0e1626",card:"#18233a",ink:"#edf1f7"},{n:"ذهبي",hd:"#1d1608",acc:"#d4a017",bg:"#15110a",card:"#211a0d",ink:"#f3ead2"}];
 function load(){try{var r=localStorage.getItem(KEY);if(r)return JSON.parse(r)}catch(x){}return mem}
