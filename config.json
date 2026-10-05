@@ -1,9 +1,9 @@
 {
- "version": "1.1.0",
- "updateMsg": "واجهة جديدة وأذكار كاملة ونظام 12 ساعة",
+ "version": "1.2.0",
+ "updateMsg": "ألوان مريحة وبوصلة دقيقة",
  "appName": "المؤذن",
- "accent": "#d4af37",
- "bg": "#07241d",
+ "accent": "#c9a961",
+ "bg": "#0c1f1a",
  "features": {
   "quran": true,
   "azkar": true,
@@ -444,5 +444,6 @@
     }
    ]
   }
- ]
+ ],
+ "text": "#e6dfc8"
 }
