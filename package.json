@@ -1,1 +1,1 @@
-{"name":"muadhin","version":"1.0.0","private":true,"dependencies":{"@capacitor/core":"^6.0.0","@capacitor/android":"^6.0.0","@capacitor/local-notifications":"^6.0.0"},"devDependencies":{"@capacitor/cli":"^6.0.0"}}
+{"name": "muadhin", "version": "1.0.0", "private": true, "dependencies": {"@capacitor/core": "^6.0.0", "@capacitor/android": "^6.0.0", "@capacitor/local-notifications": "^6.0.0", "@capacitor/status-bar": "^6.0.0"}, "devDependencies": {"@capacitor/cli": "^6.0.0"}}
