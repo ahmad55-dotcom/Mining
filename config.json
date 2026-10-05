@@ -1,7 +1,7 @@
 {
- "version": "1.0.4",
+ "version": "1.0.5",
  "updateMsg": "أهلاً بك في المؤذن",
- "appName": "المؤذن 1",
+ "appName": "المؤذن",
  "accent": "#d4af37",
  "bg": "#07241d",
  "features": {
