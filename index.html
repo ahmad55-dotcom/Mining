@@ -1,0 +1,53 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="manifest" href="manifest.json"><title>المؤذن</title>
+<style>:root{--a:#d4af37;--bg:#07241d;--c:#0f3a2f;--t:#f5efd9}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,var(--c),var(--bg));color:var(--t);font-family:system-ui,'Segoe UI',Tahoma;min-height:100vh;padding:env(safe-area-inset-top) 0 80px}
+h1{text-align:center;color:var(--a);margin:14px 0 4px}.card{background:#ffffff10;border:1px solid #d4af3744;border-radius:16px;margin:10px 14px;padding:14px}
+.row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #ffffff14}.row.n{color:var(--a);font-weight:700}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#031510;padding-bottom:env(safe-area-inset-bottom);border-top:1px solid var(--a)}nav button{flex:1;background:0;border:0;color:var(--t);padding:12px 2px;font-size:13px}nav button.on{color:var(--a)}
+button.b,select,input{background:var(--a);color:#111;border:0;border-radius:10px;padding:9px 14px;font-size:14px}select,input{background:#ffffff18;color:var(--t);width:100%;margin:5px 0}
+#u{position:fixed;top:10px;left:10px;right:10px;background:var(--a);color:#111;padding:12px;border-radius:12px;z-index:9;display:none}
+#p{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;z-index:8}#p div{background:var(--bg);border:2px solid var(--a);border-radius:22px;padding:34px;text-align:center;font-size:34px;color:var(--a)}
+#k{width:240px;height:240px;border:3px solid var(--a);border-radius:50%;margin:20px auto;position:relative}#k i{position:absolute;left:50%;top:6px;height:108px;width:4px;background:var(--a);transform-origin:bottom;margin-left:-2px}.big{font-size:42px;text-align:center;color:var(--a)}</style></head><body>
+<div id="u"></div><div id="p" onclick="this.style.display='none'"><div id="pt"></div></div>
+<h1 id="ti">المؤذن</h1><div id="v"></div>
+<nav id="nv"></nav>
+<script>
+const $=s=>document.querySelector(s);const CFG='__CFG__'.startsWith('__')?'config.json':'__CFG__';let C={},T={},tab='p',S=Object.assign({mode:'auto',country:'Saudi Arabia',city:'Riyadh',voice:'haidan',off:{},my:[],method:4},JSON.parse(localStorage.s||'{}'));
+const save=()=>localStorage.s=JSON.stringify(S),N={Fajr:'الفجر',Sunrise:'الشروق',Dhuhr:'الظهر',Asr:'العصر',Maghrib:'المغرب',Isha:'العشاء'};
+const CT={'Saudi Arabia':'Riyadh','Egypt':'Cairo','UAE':'Dubai','Kuwait':'Kuwait City','Qatar':'Doha','Jordan':'Amman','Iraq':'Baghdad','Morocco':'Rabat','Algeria':'Algiers','Tunisia':'Tunis','Yemen':'Sanaa','Oman':'Muscat','Bahrain':'Manama','Turkey':'Ankara','Palestine':'Jerusalem','Sudan':'Khartoum','Libya':'Tripoli','Lebanon':'Beirut','Syria':'Damascus'};
+async function cfg(f){try{const n=await(await fetch(CFG+'?t='+Date.now(),{cache:'no-store'})).json();if(S.ver&&S.ver!==n.version){const u=$('#u');u.innerHTML='🔔 تحديث جديد '+n.version+'<br>'+(n.updateMsg||'');u.style.display='block';setTimeout(()=>u.style.display='none',9000)}S.ver=n.version;save();C=n;ui()}catch(e){}}
+function ui(){const r=document.documentElement.style;r.setProperty('--a',C.accent);r.setProperty('--bg',C.bg);$('#ti').textContent=C.appName;document.title=C.appName;
+const f=C.features||{},m=[['p','🕌','الصلاة'],f.qibla&&['q','🧭','القبلة'],f.azkar&&['z','📿','الأذكار'],f.quran&&['r','📖','القرآن'],['v','🎙','الأصوات'],['s','⚙️','الإعدادات']].filter(Boolean);
+$('#nv').innerHTML=m.map(x=>`<button class="${tab==x[0]?'on':''}" onclick="tab='${x[0]}';ui()">${x[1]}<br>${x[2]}</button>`).join('');V[tab]()}
+async function getT(){let u;if(S.mode=='auto'){const p=await new Promise(r=>navigator.geolocation?navigator.geolocation.getCurrentPosition(x=>r(x.coords),()=>r(0)):r(0));if(p){S.lat=p.latitude;S.lon=p.longitude;u=`timings?latitude=${p.latitude}&longitude=${p.longitude}&method=${S.method}`}}
+u=u||`timingsByCity?city=${S.city}&country=${S.country}&method=${S.method}`;try{T=(await(await fetch('https://api.aladhan.com/v1/'+u)).json()).data.timings;localStorage.T=JSON.stringify(T)}catch(e){T=JSON.parse(localStorage.T||'{}')}if(tab=='p')ui();sched()}
+const tm=k=>{const[h,m]=(T[k]||'0:0').split(':').map(Number);const d=(h*60+m+(+S.off[k]||0)+1440)%1440;return[Math.floor(d/60),d%60]},fm=a=>String(a[0]).padStart(2,'0')+':'+String(a[1]).padStart(2,'0');
+const V={p(){const n=new Date(),c=n.getHours()*60+n.getMinutes();let nx=Object.keys(N).find(k=>{const t=tm(k);return t[0]*60+t[1]>c})||'Fajr';
+$('#v').innerHTML=`<div class="card"><div class="big">${new Date().toLocaleDateString('ar',{weekday:'long',day:'numeric',month:'long'})}</div>`+Object.keys(N).map(k=>`<div class="row ${k==nx?'n':''}"><span>${N[k]}</span><span>${T[k]?fm(tm(k)):'--'}</span></div>`).join('')+`</div>`},
+s(){$('#v').innerHTML=`<div class="card"><b>التوقيت</b><select onchange="S.mode=this.value;save();getT();ui()"><option value=auto ${S.mode=='auto'?'selected':''}>تلقائي (GPS)</option><option value=manual ${S.mode!='auto'?'selected':''}>يدوي</option></select>
+<select onchange="S.country=this.value;S.city=CT[this.value];S.mode='manual';save();getT();ui()">${Object.keys(CT).map(k=>`<option ${k==S.country?'selected':''}>${k}</option>`)}</select><input value="${S.city}" onchange="S.city=this.value;S.mode='manual';save();getT()" placeholder="المدينة">
+<select onchange="S.method=this.value;save();getT()">${[[4,'أم القرى'],[5,'الهيئة المصرية'],[3,'رابطة العالم الإسلامي'],[2,'ISNA'],[1,'كراتشي']].map(x=>`<option value=${x[0]} ${S.method==x[0]?'selected':''}>${x[1]}</option>`)}</select></div>
+<div class="card"><b>ضبط يدوي بالدقائق</b>${Object.keys(N).map(k=>`<div class="row">${N[k]}<input type=number style="width:80px" value="${S.off[k]||0}" onchange="S.off['${k}']=this.value;save()"></div>`).join('')}</div>
+<div class="card"><button class="b" onclick="Notification.requestPermission()">تفعيل الإشعارات</button></div>`},
+v(){const L=[...C.voices,...S.my];$('#v').innerHTML=`<div class="card"><b>أصوات الأذان</b>`+L.map((x,i)=>`<div class="row"><span>${x.name}${x.locked?' 🔒':''}</span><span><button class="b" onclick="play('${x.url}')">▶</button> <button class="b" onclick="dl('${x.url}')">⬇</button> <button class="b" onclick="S.voice='${x.id}';save();ui()">${S.voice==x.id?'✔':'اختيار'}</button></span></div>`).join('')+`</div>
+<div class="card"><b>إضافة صوت شيخ</b><input id=an placeholder="اسم الشيخ"><input id=au placeholder="رابط ملف mp3"><button class="b" onclick="S.my.push({id:'u'+Date.now(),name:an.value,url:au.value});save();ui()">إضافة</button></div>`},
+z(){$('#v').innerHTML=C.azkar.map(g=>`<div class="card"><b style="color:var(--a)">${g.title}</b>`+g.items.map(i=>`<div class="row">${i}</div>`).join('')+'</div>').join('')},
+async r(){$('#v').innerHTML=`<div class="card"><select id=rc>${C.reciters.map(x=>`<option value=${x.id}>${x.name}</option>`)}</select><audio id=au2 controls style="width:100%"></audio></div><div id=sl class="card">...</div>`;
+const d=(await(await fetch('https://api.alquran.cloud/v1/surah')).json()).data;$('#sl').innerHTML=d.map(s=>`<div class="row"><span onclick="surah(${s.number})">${s.number}. ${s.name}</span><button class="b" onclick="au2.src='https://cdn.islamic.network/quran/audio-surah/128/'+rc.value+'/${s.number}.mp3';au2.play()">▶</button></div>`).join('')},
+q(){const b=(()=>{const r=x=>x*Math.PI/180,la=r(S.lat||24.7),lo=r(S.lon||46.7),k=r(21.4225),ko=r(39.8262);return(Math.atan2(Math.sin(ko-lo)*Math.cos(k),Math.cos(la)*Math.sin(k)-Math.sin(la)*Math.cos(k)*Math.cos(ko-lo))*180/Math.PI+360)%360})();S.qb=b;
+$('#v').innerHTML=`<div class="card"><div class="big">${b.toFixed(1)}° من الشمال</div><div id=k><i id=nd style="transform:rotate(${b}deg)"></i><span style="position:absolute;top:2px;left:48%">N</span></div><center><button class="b" onclick="comp()">تشغيل البوصلة</button></center></div>`},
+async surah(n){}};
+async function surah(n){const d=(await(await fetch('https://api.alquran.cloud/v1/surah/'+n+'/quran-uthmani')).json()).data;$('#v').innerHTML=`<div class="card"><button class="b" onclick="ui()">رجوع</button><h2>${d.name}</h2><div style="font-size:24px;line-height:2.2">${d.ayahs.map(a=>a.text+' ﴿'+a.numberInSurah+'﴾').join(' ')}</div></div>`}
+async function comp(){if(DeviceOrientationEvent.requestPermission)await DeviceOrientationEvent.requestPermission();const h=e=>{const hd=e.webkitCompassHeading??(360-e.alpha);const n=$('#nd');if(n)n.style.transform=`rotate(${S.qb-hd}deg)`};addEventListener('deviceorientationabsolute',h);addEventListener('deviceorientation',h)}
+function sched(){const L=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.LocalNotifications;if(!L)return;const ks=Object.keys(N).filter(k=>k!='Sunrise');
+L.requestPermissions().then(()=>L.cancel({notifications:ks.map((k,i)=>({id:i+1}))}).catch(()=>{})).then(()=>{const n=[];ks.forEach((k,i)=>{const t=tm(k),d=new Date();d.setHours(t[0],t[1],0,0);if(d>new Date())n.push({id:i+1,title:C.appName,body:'حان وقت صلاة '+N[k],schedule:{at:d,allowWhileIdle:true}})});if(n.length)L.schedule({notifications:n})})}
+async function src(u){const m=await caches.match(u);return m?URL.createObjectURL(await m.blob()):u}
+async function play(u){const a=new Audio(await src(u));a.play().catch(()=>{});return a}
+async function dl(u){const c=await caches.open('aud');await c.add(u);alert('تم التنزيل')}
+function pop(i){const p=$('#p');$('#pt').textContent=i.t;p.style.display='flex';i.a?play(i.a):speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(i.t),{lang:'ar'}));if(Notification.permission=='granted')new Notification(i.t);setTimeout(()=>p.style.display='none',5000)}
+let di=0,lastD=Date.now(),lf='';
+setInterval(()=>{const n=new Date(),k=n.getHours()+':'+n.getMinutes();
+if(C.dhikr&&C.dhikr.enabled&&Date.now()-lastD>C.dhikr.everyMin*6e4){lastD=Date.now();pop(C.dhikr.items[di++%C.dhikr.items.length])}
+for(const p in N){if(p=='Sunrise')continue;const t=tm(p);if(t[0]+':'+t[1]==k&&lf!=p+k){lf=p+k;const v=[...C.voices,...S.my].find(x=>x.id==S.voice)||C.voices[0];play(v.url);if(Notification.permission=='granted')new Notification('حان وقت صلاة '+N[p])}}},1000);
+setInterval(cfg,60000);if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
+T=JSON.parse(localStorage.T||'{}');cfg().then(getT);
+</script></body></html>
