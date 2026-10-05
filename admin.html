@@ -1,0 +1,16 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>لوحة الإدارة</title>
+<style>body{font-family:system-ui;background:#111;color:#eee;padding:14px}input,textarea,button{width:100%;margin:5px 0;padding:10px;border-radius:8px;border:0;font-size:14px}textarea{height:320px;direction:ltr;font-family:monospace}button{background:#d4af37;font-weight:700}.c{background:#1c1c1c;padding:12px;border-radius:12px;margin-bottom:10px}</style></head><body>
+<h2>🛠 لوحة إدارة المؤذن</h2>
+<div class="c"><b>الربط مع GitHub</b><input id=o placeholder="owner"><input id=r placeholder="repo"><input id=br value="main"><input id=tk type=password placeholder="Personal Access Token (contents: write)"><button onclick="ld()">تحميل الإعدادات</button></div>
+<div class="c"><b>تعديلات سريعة</b><input id=an placeholder="اسم التطبيق"><input id=ac placeholder="اللون #d4af37"><input id=bg placeholder="الخلفية"><input id=um placeholder="رسالة التحديث"><input id=ev type=number placeholder="تكرار الذكر بالدقائق"></div>
+<div class="c"><b>كامل الإعدادات (JSON): الأصوات، الأذكار، القراء، الأذكار المنبثقة، الميزات</b><textarea id=js></textarea><button onclick="sv()">💾 حفظ ونشر فوري (يرفع الإصدار تلقائياً)</button></div><p id=m></p>
+<script>
+const $=s=>document.getElementById(s);['o','r','br','tk'].forEach(k=>{$(k).value=localStorage['a'+k]||$(k).value;$(k).onchange=()=>localStorage['a'+k]=$(k).value});
+let sha,U=()=>`https://api.github.com/repos/${o.value}/${r.value}/contents/config.json`,H=()=>({Authorization:'token '+tk.value,Accept:'application/vnd.github+json'});
+async function ld(){const d=await(await fetch(U()+'?ref='+br.value,{headers:H()})).json();sha=d.sha;const c=JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\n/g,'')))));js.value=JSON.stringify(c,null,1);an.value=c.appName;ac.value=c.accent;bg.value=c.bg;um.value=c.updateMsg;ev.value=c.dhikr.everyMin}
+async function sv(){let c=JSON.parse(js.value);Object.assign(c,{appName:an.value,accent:ac.value,bg:bg.value,updateMsg:um.value});c.dhikr.everyMin=+ev.value;
+if(!c.voices.some(v=>v.id=='haidan'))c.voices.unshift({id:'haidan',name:'محمد الحيدان',url:'audio/haidan.mp3',locked:true});
+const p=c.version.split('.');p[2]=+p[2]+1;c.version=p.join('.');
+const x=await fetch(U(),{method:'PUT',headers:H(),body:JSON.stringify({message:'update '+c.version,branch:br.value,sha,content:btoa(unescape(encodeURIComponent(JSON.stringify(c,null,1))))})});
+m.textContent=x.ok?'✅ تم النشر '+c.version+' - يصل للمستخدمين خلال ثوانٍ':'❌ فشل: '+x.status;if(x.ok){sha=(await x.json()).content.sha;js.value=JSON.stringify(c,null,1)}}
+</script></body></html>
