@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>طبيبي - دليل العيادات والمراكز الطبية</title>
+<meta name="theme-color" content="#0f6e8c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { theme: { extend: {
+  fontFamily: { sans: ['"IBM Plex Sans Arabic"', 'Tahoma', 'sans-serif'] },
+  colors: { brand: { 50:'#eef7fa', 100:'#d6ecf3', 600:'#0f6e8c', 700:'#0b5870', 900:'#083b4b' },
+            mint: { 50:'#edf8f2', 100:'#d3f0e0', 600:'#1f9d63', 700:'#17784c' } }
+}}};
+</script>
+<style>
+  body { background:#f4f9fb; }
+  .card { transition: box-shadow .2s; }
+  .card:hover { box-shadow: 0 8px 24px rgba(15,110,140,.12); }
+  input:focus, select:focus, button:focus-visible, a:focus-visible { outline: 2px solid #0f6e8c; outline-offset: 2px; }
+  dialog::backdrop { background: rgba(8,59,75,.45); }
+  dialog[open] { animation: pop .18s ease-out; }
+  @keyframes pop { from { transform: scale(.96); opacity:0 } to { transform:none; opacity:1 } }
+  @media (prefers-reduced-motion: reduce) { dialog[open] { animation:none } .card { transition:none } }
+</style>
+</head>
+<body class="font-sans text-slate-800 min-h-screen">
+
+<header class="bg-brand-600 text-white">
+  <div class="max-w-5xl mx-auto px-4 pt-6 pb-16">
+    <div class="flex items-center gap-3">
+      <img src="icon.svg" alt="" class="w-11 h-11 rounded-xl">
+      <div>
+        <h1 class="text-2xl font-bold leading-tight">طبيبي</h1>
+        <p class="text-brand-100 text-sm">دليل العيادات والمراكز الطبية في سوريا</p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-4 -mt-10 pb-12">
+  <!-- البحث والفلترة -->
+  <section class="bg-white rounded-2xl shadow-md p-4 space-y-3" aria-label="البحث">
+    <label class="block">
+      <span class="sr-only">ابحث</span>
+      <input id="q" type="search" placeholder="ابحث باسم الطبيب أو التخصص أو الحي…"
+        class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base">
+    </label>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <select id="spec" class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5" aria-label="التخصص"></select>
+      <select id="prov" class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5" aria-label="المحافظة"></select>
+      <label class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 cursor-pointer">
+        <input id="openOnly" type="checkbox" class="w-4 h-4 accent-emerald-600">
+        <span>المفتوح الآن فقط</span>
+      </label>
+    </div>
+  </section>
+
+  <p id="count" class="mt-5 mb-3 text-sm text-slate-500" aria-live="polite"></p>
+  <section id="list" class="grid gap-4 md:grid-cols-2"></section>
+  <p id="empty" class="hidden text-center text-slate-500 py-12">لا توجد نتائج مطابقة. جرّب تغيير التخصص أو المحافظة، أو امسح كلمة البحث.</p>
+</main>
+
+<!-- نافذة الحجز -->
+<dialog id="dlg" class="rounded-2xl p-0 w-[92vw] max-w-md shadow-xl">
+  <form id="bookForm" method="dialog" class="p-5 space-y-4">
+    <div>
+      <h2 class="text-lg font-bold text-brand-900">طلب حجز دور مبدئي</h2>
+      <p id="dlgFor" class="text-sm text-slate-500 mt-1"></p>
+    </div>
+    <label class="block text-sm font-medium">الاسم الكامل
+      <input id="bName" required minlength="3" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5">
+    </label>
+    <label class="block text-sm font-medium">رقم الهاتف
+      <input id="bPhone" required type="tel" inputmode="tel" dir="ltr" placeholder="09XXXXXXXX" pattern="[0-9+\s]{9,15}"
+        class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-right">
+    </label>
+    <label class="block text-sm font-medium">التاريخ المفضل
+      <input id="bDate" required type="date" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5">
+    </label>
+    <p class="text-xs text-slate-500">هذا طلب مبدئي، وتؤكد العيادة الموعد معك عبر الهاتف.</p>
+    <div class="flex gap-2">
+      <button type="submit" class="flex-1 rounded-xl bg-mint-600 hover:bg-mint-700 text-white font-semibold py-2.5">إرسال الطلب</button>
+      <button type="button" id="cancel" class="rounded-xl bg-slate-100 hover:bg-slate-200 px-5 py-2.5">إلغاء</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="fixed bottom-5 inset-x-0 mx-auto w-fit max-w-[90vw] bg-brand-900 text-white text-sm rounded-xl px-4 py-3 shadow-lg hidden" role="status"></div>
+
+<script>
+/* ===== بيانات تجريبية ===== */
+// days: 0=الأحد ... 6=السبت | shifts: [بداية, نهاية] بتوقيت 24 ساعة
+const CLINICS = [
+  { id:1, type:"عيادة", name:"د. ريم العلي", specialty:"أطفال", province:"دمشق", district:"المزة - فيلات غربية",
+    address:"بناء الشفاء، الطابق الثاني، قرب جامع الإيمان", days:[6,0,1,2,3], shifts:[["16:00","20:00"]],
+    phone:"+963112345601", whatsapp:"963944000001" },
+  { id:2, type:"عيادة", name:"د. محمد الخطيب", specialty:"عظمية", province:"حلب", district:"الفرقان",
+    address:"شارع الفرقان الرئيسي، مقابل صيدلية الأمل", days:[6,0,1,2,3,4], shifts:[["10:00","14:00"],["17:00","20:00"]],
+    phone:"+963212345602", whatsapp:"963944000002" },
+  { id:3, type:"عيادة", name:"د. هالة حداد", specialty:"عيون", province:"حمص", district:"الحمراء",
+    address:"شارع الحمراء، بناء النور، الطابق الأول", days:[0,1,2,3,4], shifts:[["09:00","13:00"]],
+    phone:"+963312345603", whatsapp:"963944000003" },
+  { id:4, type:"مخبر", name:"مخبر الشام للتحاليل الطبية", specialty:"تحاليل مخبرية", province:"اللاذقية", district:"الزراعة",
+    address:"شارع الجمهورية، بجانب مشفى الأسد الجامعي", days:[6,0,1,2,3,4,5], shifts:[["07:00","15:00"]],
+    phone:"+963412345604", whatsapp:"963944000004" }
+];
+
+const DAY_NAMES = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+const $ = id => document.getElementById(id);
+
+/* ===== الوقت بتوقيت دمشق ===== */
+function nowInDamascus() {
+  const p = new Intl.DateTimeFormat("en-US", { timeZone:"Asia/Damascus", weekday:"short", hour:"2-digit", minute:"2-digit", hour12:false })
+    .formatToParts(new Date()).reduce((a,x)=>(a[x.type]=x.value,a),{});
+  const day = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(p.weekday);
+  return { day, min: (+p.hour % 24) * 60 + +p.minute };
+}
+const toMin = t => { const [h,m] = t.split(":").map(Number); return h*60+m; };
+const fmt12 = t => { let [h,m] = t.split(":").map(Number); const s = h>=12 ? "م" : "ص"; h = h%12 || 12; return `${h}:${String(m).padStart(2,"0")} ${s}`; };
+
+function isOpen(c) {
+  const n = nowInDamascus();
+  return c.days.includes(n.day) && c.shifts.some(([a,b]) => n.min >= toMin(a) && n.min < toMin(b));
+}
+function daysText(days) {
+  const order = [6,0,1,2,3,4,5];               // الأسبوع يبدأ بالسبت
+  const ds = order.filter(d => days.includes(d));
+  const contiguous = ds.every((d,i) => i===0 || order.indexOf(d) === order.indexOf(ds[i-1])+1);
+  if (ds.length === 7) return "كل أيام الأسبوع";
+  if (ds.length > 2 && contiguous) return `${DAY_NAMES[ds[0]]} إلى ${DAY_NAMES[ds[ds.length-1]]}`;
+  return ds.map(d => DAY_NAMES[d]).join("، ");
+}
+const hoursText = shifts => shifts.map(([a,b]) => `من ${fmt12(a)} إلى ${fmt12(b)}`).join(" و ");
+
+/* ===== الفلاتر ===== */
+function fillSelect(el, label, values) {
+  el.innerHTML = `<option value="">${label}</option>` + values.map(v => `<option>${v}</option>`).join("");
+}
+const uniq = k => [...new Set(CLINICS.map(c => c[k]))];
+fillSelect($("spec"), "كل التخصصات", uniq("specialty"));
+fillSelect($("prov"), "كل المحافظات", ["دمشق","ريف دمشق","حلب","حمص","حماة","اللاذقية","طرطوس","إدلب","درعا","السويداء","دير الزور","الحسكة","الرقة","القنيطرة"]);
+
+const norm = s => s.replace(/[ًٌٍَُِّْ]/g,"").replace(/[أإآ]/g,"ا").replace(/ى/g,"ي").replace(/ة/g,"ه").toLowerCase();
+
+/* ===== العرض ===== */
+function card(c) {
+  const open = isOpen(c);
+  const badge = open
+    ? `<span class="inline-flex items-center gap-1.5 rounded-full bg-mint-100 text-mint-700 text-xs font-semibold px-2.5 py-1"><span class="w-2 h-2 rounded-full bg-mint-600"></span>مفتوح الآن</span>`
+    : `<span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold px-2.5 py-1"><span class="w-2 h-2 rounded-full bg-slate-400"></span>مغلق</span>`;
+  return `
+  <article class="card bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-col gap-3">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h3 class="text-lg font-bold text-brand-900">${c.name}</h3>
+        <p class="text-brand-600 font-medium">${c.specialty} <span class="text-slate-400 font-normal">· ${c.type}</span></p>
+      </div>
+      ${badge}
+    </div>
+    <p class="text-sm text-slate-600"><span class="font-semibold">${c.province}</span> - ${c.district}<br><span class="text-slate-500">${c.address}</span></p>
+    <p class="text-sm bg-brand-50 rounded-xl px-3 py-2"><span class="font-semibold">الدوام:</span> ${daysText(c.days)}<br>${hoursText(c.shifts)}</p>
+    <div class="grid grid-cols-3 gap-2 mt-auto pt-1">
+      <a href="tel:${c.phone}" class="text-center rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold py-2.5">اتصال</a>
+      <button data-book="${c.id}" class="rounded-xl bg-mint-600 hover:bg-mint-700 text-white text-sm font-semibold py-2.5">طلب حجز</button>
+      <a href="https://wa.me/${c.whatsapp}?text=${encodeURIComponent("مرحباً، أود الاستفسار عن موعد في عيادتكم (عبر تطبيق طبيبي).")}" target="_blank" rel="noopener"
+         class="text-center rounded-xl border border-mint-600 text-mint-700 hover:bg-mint-50 text-sm font-semibold py-2.5">واتساب</a>
+    </div>
+  </article>`;
+}
+
+function render() {
+  const q = norm($("q").value.trim()), sp = $("spec").value, pv = $("prov").value, oo = $("openOnly").checked;
+  const res = CLINICS.filter(c =>
+    (!q || norm(`${c.name} ${c.specialty} ${c.district} ${c.province}`).includes(q)) &&
+    (!sp || c.specialty === sp) && (!pv || c.province === pv) && (!oo || isOpen(c)));
+  $("list").innerHTML = res.map(card).join("");
+  $("empty").classList.toggle("hidden", res.length > 0);
+  $("count").textContent = res.length ? `${res.length} نتيجة` : "";
+}
+["q","spec","prov","openOnly"].forEach(id => $(id).addEventListener("input", render));
+setInterval(render, 60000);                      // تحديث حالة الدوام كل دقيقة
+
+/* ===== الحجز ===== */
+let current = null;
+$("list").addEventListener("click", e => {
+  const b = e.target.closest("[data-book]"); if (!b) return;
+  current = CLINICS.find(c => c.id === +b.dataset.book);
+  $("dlgFor").textContent = `${current.name} - ${current.specialty}`;
+  $("bDate").min = new Date().toISOString().split("T")[0];
+  $("dlg").showModal();
+});
+$("cancel").onclick = () => $("dlg").close();
+$("bookForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const req = { clinicId: current.id, name: $("bName").value, phone: $("bPhone").value, date: $("bDate").value, at: Date.now() };
+  try { const all = JSON.parse(localStorage.getItem("tabibi_requests") || "[]"); all.push(req); localStorage.setItem("tabibi_requests", JSON.stringify(all)); } catch(_) {}
+  $("dlg").close(); $("bookForm").reset();
+  toast(`تم إرسال طلبك إلى ${current.name}. ستتصل بك العيادة للتأكيد.`);
+});
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.remove("hidden"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.add("hidden"), 4000); }
+
+render();
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
+ 
