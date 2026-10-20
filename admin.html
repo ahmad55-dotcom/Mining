@@ -1,16 +1,198 @@
-<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>لوحة الإدارة</title>
-<style>body{font-family:system-ui;background:#111;color:#eee;padding:14px}input,textarea,button{width:100%;margin:5px 0;padding:10px;border-radius:8px;border:0;font-size:14px}textarea{height:320px;direction:ltr;font-family:monospace}button{background:#d4af37;font-weight:700}.c{background:#1c1c1c;padding:12px;border-radius:12px;margin-bottom:10px}</style></head><body>
-<h2>🛠 لوحة إدارة المؤذن</h2>
-<div class="c"><b>الربط مع GitHub</b><input id=o placeholder="owner"><input id=r placeholder="repo"><input id=br value="main"><input id=tk type=password placeholder="Personal Access Token (contents: write)"><button onclick="ld()">تحميل الإعدادات</button></div>
-<div class="c"><b>تعديلات سريعة</b><input id=an placeholder="اسم التطبيق"><input id=ac placeholder="اللون #d4af37"><input id=bg placeholder="الخلفية"><input id=um placeholder="رسالة التحديث"><input id=ev type=number placeholder="تكرار الذكر بالدقائق"></div>
-<div class="c"><b>كامل الإعدادات (JSON): الأصوات، الأذكار، القراء، الأذكار المنبثقة، الميزات</b><textarea id=js></textarea><button onclick="sv()">💾 حفظ ونشر فوري (يرفع الإصدار تلقائياً)</button></div><p id=m></p>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لوحة العيادة - طبيبي</title>
+<meta name="theme-color" content="#0f6e8c">
+<link rel="icon" href="icon.svg">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
 <script>
-const $=s=>document.getElementById(s);['o','r','br','tk'].forEach(k=>{$(k).value=localStorage['a'+k]||$(k).value;$(k).onchange=()=>localStorage['a'+k]=$(k).value});
-let sha,U=()=>`https://api.github.com/repos/${o.value}/${r.value}/contents/config.json`,H=()=>({Authorization:'token '+tk.value,Accept:'application/vnd.github+json'});
-async function ld(){const d=await(await fetch(U()+'?ref='+br.value,{headers:H()})).json();sha=d.sha;const c=JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\n/g,'')))));js.value=JSON.stringify(c,null,1);an.value=c.appName;ac.value=c.accent;bg.value=c.bg;um.value=c.updateMsg;ev.value=c.dhikr.everyMin}
-async function sv(){let c=JSON.parse(js.value);Object.assign(c,{appName:an.value,accent:ac.value,bg:bg.value,updateMsg:um.value});c.dhikr.everyMin=+ev.value;
-if(!c.voices.some(v=>v.id=='haidan'))c.voices.unshift({id:'haidan',name:'محمد الحيدان',url:'audio/haidan.mp3',locked:true});
-const p=c.version.split('.');p[2]=+p[2]+1;c.version=p.join('.');
-const x=await fetch(U(),{method:'PUT',headers:H(),body:JSON.stringify({message:'update '+c.version,branch:br.value,sha,content:btoa(unescape(encodeURIComponent(JSON.stringify(c,null,1))))})});
-m.textContent=x.ok?'✅ تم النشر '+c.version+' - يصل للمستخدمين خلال ثوانٍ':'❌ فشل: '+x.status;if(x.ok){sha=(await x.json()).content.sha;js.value=JSON.stringify(c,null,1)}}
-</script></body></html>
+tailwind.config = { theme: { extend: {
+  fontFamily: { sans: ['"IBM Plex Sans Arabic"', 'Tahoma', 'sans-serif'] },
+  colors: { brand: { 50:'#eef7fa', 100:'#d6ecf3', 600:'#0f6e8c', 700:'#0b5870', 900:'#083b4b' },
+            mint: { 50:'#edf8f2', 100:'#d3f0e0', 600:'#1f9d63', 700:'#17784c' } } } } };
+</script>
+<style>
+  body { background:#f4f9fb; }
+  input:focus, button:focus-visible, a:focus-visible { outline:2px solid #0f6e8c; outline-offset:2px; }
+</style>
+</head>
+<body class="font-sans text-slate-800 min-h-screen">
+
+<header class="bg-brand-600 text-white">
+  <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <img src="icon.svg" alt="" class="w-9 h-9 rounded-lg">
+      <div>
+        <h1 class="font-bold leading-tight">لوحة العيادة</h1>
+        <p id="clinicName" class="text-brand-100 text-sm"></p>
+      </div>
+    </div>
+    <button id="logout" class="hidden text-sm bg-white/15 hover:bg-white/25 rounded-lg px-3 py-1.5">تسجيل الخروج</button>
+  </div>
+</header>
+
+<main class="max-w-4xl mx-auto px-4 py-6">
+
+  <!-- تسجيل الدخول -->
+  <section id="loginView" class="hidden max-w-sm mx-auto bg-white rounded-2xl shadow-md p-5 space-y-4">
+    <h2 class="text-lg font-bold text-brand-900">تسجيل الدخول</h2>
+    <form id="loginForm" class="space-y-3">
+      <label class="block text-sm font-medium">رقم هاتف العيادة
+        <input id="email" type="text" required dir="ltr" placeholder="09XXXXXXXX" autocomplete="username" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-right"></label>
+      <label class="block text-sm font-medium">كلمة سر العيادة
+        <input id="pass" type="password" required dir="ltr" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-right"></label>
+      <p id="loginErr" class="text-sm text-red-600 hidden"></p>
+      <button class="w-full rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5">دخول</button>
+    </form>
+  </section>
+
+  <!-- حساب غير مرتبط -->
+  <section id="noClinicView" class="hidden bg-white rounded-2xl shadow-md p-5 space-y-3">
+    <h2 class="text-lg font-bold text-brand-900">حسابك غير مرتبط بعيادة بعد</h2>
+    <p class="text-sm text-slate-600">انسخ المعرّف التالي وأرسله لإدارة «طبيبي» ليتم ربطه بعيادتك (الحقل <code>ownerUid</code>):</p>
+    <code id="uidBox" dir="ltr" class="block bg-slate-100 rounded-lg p-3 text-sm break-all"></code>
+  </section>
+
+  <!-- لوحة الحجوزات -->
+  <section id="dashView" class="hidden space-y-4">
+    <div id="closeCard" class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center justify-between gap-3">
+      <div>
+        <p class="font-semibold">العيادة مغلقة اليوم طارئاً</p>
+        <p id="closeHint" class="text-sm text-slate-500">يظهر تنبيه للمرضى في التطبيق فوراً، ويُلغى تلقائياً غداً.</p>
+      </div>
+      <button id="closeToggle" type="button" role="switch" aria-checked="false" aria-label="إغلاق العيادة اليوم طارئاً"
+        class="relative shrink-0 w-14 h-8 rounded-full bg-slate-300 transition-colors">
+        <span id="knob" class="absolute top-1 right-1 w-6 h-6 rounded-full bg-white shadow transition-transform"></span>
+      </button>
+    </div>
+    <div id="tabs" class="grid grid-cols-3 gap-2"></div>
+    <label class="block">
+      <span class="sr-only">فلترة بالتاريخ</span>
+      <input id="dateFilter" type="date" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" aria-label="فلترة بتاريخ الحجز">
+      <button id="clearDate" class="text-sm text-brand-600 underline mr-2">كل التواريخ</button>
+    </label>
+    <div id="rows" class="space-y-3"></div>
+    <p id="none" class="hidden text-center text-slate-500 py-10">لا توجد حجوزات في هذا التصنيف حتى الآن.</p>
+  </section>
+</main>
+
+<script type="module">
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { collection, query, where, getDocs, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { db, auth, FIREBASE_READY } from "./firebase-config.js";
+
+const $ = id => document.getElementById(id);
+const show = id => ["loginView","noClinicView","dashView"].forEach(v => $(v).classList.toggle("hidden", v !== id));
+const STATUS = {
+  pending:   { label:"قيد الانتظار", cls:"bg-amber-100 text-amber-800" },
+  confirmed: { label:"مؤكد",         cls:"bg-mint-100 text-mint-700" },
+  rejected:  { label:"مرفوض",        cls:"bg-slate-200 text-slate-600" }
+};
+let items = [], tab = "pending", clinic = null, unsub = null, unsubClinic = null;
+
+// أرقام سورية: 09xxxxxxxx -> 9639xxxxxxxx
+function waNumber(p) {
+  let d = p.replace(/[^\d+]/g, "");
+  if (d.startsWith("+")) d = d.slice(1); else if (d.startsWith("00")) d = d.slice(2); else if (d.startsWith("0")) d = "963" + d.slice(1);
+  return d;
+}
+// الدخول بالهاتف: نحوّل الرقم إلى بريد داخلي ثابت (9639xxxxxxxx@clinic.tabibi.local)
+function toLoginEmail(v) { v = v.trim(); return v.includes("@") ? v : `${waNumber(v)}@clinic.tabibi.local`; }
+const todayDamascus = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Damascus" }).format(new Date());
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+if (!FIREBASE_READY) {
+  show("loginView");
+  $("loginErr").textContent = "لم يتم ضبط Firebase بعد. عدّل الملف firebase-config.js أولاً.";
+  $("loginErr").classList.remove("hidden");
+}
+
+$("loginForm").addEventListener("submit", async e => {
+  e.preventDefault(); $("loginErr").classList.add("hidden");
+  try { await signInWithEmailAndPassword(auth, toLoginEmail($("email").value), $("pass").value); }
+  catch { $("loginErr").textContent = "البريد أو كلمة المرور غير صحيحة."; $("loginErr").classList.remove("hidden"); }
+});
+$("logout").onclick = () => signOut(auth);
+
+if (FIREBASE_READY) onAuthStateChanged(auth, async user => {
+  if (unsub) { unsub(); unsub = null; }
+  if (unsubClinic) { unsubClinic(); unsubClinic = null; }
+  $("logout").classList.toggle("hidden", !user);
+  if (!user) { clinic = null; $("clinicName").textContent = ""; return show("loginView"); }
+  const snap = await getDocs(query(collection(db, "clinics"), where("ownerUid", "==", user.uid)));
+  if (snap.empty) { $("uidBox").textContent = user.uid; return show("noClinicView"); }
+  clinic = { id: snap.docs[0].id, ...snap.docs[0].data() };
+  $("clinicName").textContent = clinic.name;
+  show("dashView");
+  unsubClinic = onSnapshot(doc(db, "clinics", clinic.id), s => { clinic = { id: s.id, ...s.data() }; drawToggle(); });
+  unsub = onSnapshot(query(collection(db, "appointments"), where("clinicId", "==", clinic.id)), s => {
+    items = s.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    draw();
+  }, err => console.error(err));
+});
+
+function drawToggle() {
+  const on = clinic?.closedDate === todayDamascus();
+  const t = $("closeToggle");
+  t.setAttribute("aria-checked", on);
+  t.classList.toggle("bg-red-500", on); t.classList.toggle("bg-slate-300", !on);
+  $("knob").style.transform = on ? "translateX(-1.5rem)" : "";
+  $("closeHint").textContent = on ? "العيادة تظهر للمرضى الآن كمغلقة اليوم مع تنبيه بعدم السفر." : "يظهر تنبيه للمرضى في التطبيق فوراً، ويُلغى تلقائياً غداً.";
+}
+$("closeToggle").addEventListener("click", async () => {
+  const on = clinic.closedDate === todayDamascus();
+  const t = $("closeToggle"); t.disabled = true;
+  try { await updateDoc(doc(db, "clinics", clinic.id), { closedDate: on ? null : todayDamascus() }); }
+  catch (err) { console.error(err); alert("تعذّر تغيير الحالة. تحقق من الاتصال."); }
+  finally { t.disabled = false; }
+});
+
+function draw() {
+  const count = k => items.filter(i => i.status === k).length;
+  $("tabs").innerHTML = Object.entries(STATUS).map(([k, v]) => `
+    <button data-tab="${k}" class="rounded-xl py-2.5 text-sm font-semibold border ${tab === k ? "bg-brand-600 text-white border-brand-600" : "bg-white border-slate-200"}">
+      ${v.label} <span class="opacity-80">(${count(k)})</span></button>`).join("");
+  const d = $("dateFilter").value;
+  const rows = items.filter(i => i.status === tab && (!d || i.date === d));
+  $("none").classList.toggle("hidden", rows.length > 0);
+  $("rows").innerHTML = rows.map(i => {
+    const made = i.createdAt ? new Date(i.createdAt.seconds * 1000).toLocaleString("ar-SY", { dateStyle:"medium", timeStyle:"short" }) : "";
+    const msg = i.status === "rejected"
+      ? `مرحباً ${i.name}، نعتذر عن عدم توفر موعد بتاريخ ${i.date}. يرجى التواصل معنا لتحديد موعد آخر.`
+      : `مرحباً ${i.name}، تم تأكيد حجزك لدى ${clinic.name} بتاريخ ${i.date}. نرجو الحضور قبل الموعد بربع ساعة.`;
+    return `
+    <article class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-3">
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <h3 class="font-bold text-brand-900">${esc(i.name)}</h3>
+          <p dir="ltr" class="text-sm text-slate-600 text-right">${esc(i.phone)}</p>
+        </div>
+        <span class="text-xs font-semibold rounded-full px-2.5 py-1 ${STATUS[i.status]?.cls || ""}">${STATUS[i.status]?.label || i.status}</span>
+      </div>
+      <p class="text-sm"><span class="font-semibold">التاريخ المفضل:</span> ${esc(i.date)} <span class="text-slate-400 text-xs mr-2">وصل ${made}</span></p>
+      <div class="flex flex-wrap gap-2">
+        ${i.status !== "confirmed" ? `<button data-set="confirmed" data-id="${i.id}" class="rounded-lg bg-mint-600 hover:bg-mint-700 text-white text-sm font-semibold px-4 py-2">قبول</button>` : ""}
+        ${i.status !== "rejected" ? `<button data-set="rejected" data-id="${i.id}" class="rounded-lg bg-slate-200 hover:bg-slate-300 text-sm font-semibold px-4 py-2">إلغاء</button>` : ""}
+        <a href="tel:${esc(i.phone)}" class="rounded-lg border border-brand-600 text-brand-600 text-sm font-semibold px-4 py-2">اتصال</a>
+        ${i.status !== "pending" ? `<a target="_blank" rel="noopener" href="https://wa.me/${waNumber(i.phone)}?text=${encodeURIComponent(msg)}" class="rounded-lg border border-mint-600 text-mint-700 text-sm font-semibold px-4 py-2">${i.status === "confirmed" ? "تأكيد عبر واتساب" : "إبلاغ بالإلغاء عبر واتساب"}</a>` : ""}
+      </div>
+    </article>`;
+  }).join("");
+}
+
+$("tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (b) { tab = b.dataset.tab; draw(); } });
+$("dateFilter").addEventListener("input", draw);
+$("clearDate").onclick = () => { $("dateFilter").value = ""; draw(); };
+$("rows").addEventListener("click", async e => {
+  const b = e.target.closest("[data-set]"); if (!b) return;
+  b.disabled = true;
+  try { await updateDoc(doc(db, "appointments", b.dataset.id), { status: b.dataset.set }); }
+  catch (err) { console.error(err); b.disabled = false; alert("تعذّر تحديث الحالة. تحقق من الاتصال."); }
+});
+</script>
+</body>
+</html>
