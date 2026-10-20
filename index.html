@@ -65,6 +65,7 @@ tailwind.config = { theme: { extend: {
   <section id="list" class="grid gap-4 md:grid-cols-2"></section>
   <p id="empty" class="hidden text-center text-slate-500 py-12">لا توجد نتائج مطابقة. جرّب تغيير التخصص أو المحافظة، أو امسح كلمة البحث.</p>
 </main>
+<footer class="text-center text-sm text-slate-500 pb-8">هل أنت طبيب أو سكرتيرة؟ <a href="admin.html" class="text-brand-600 underline">لوحة العيادات</a></footer>
 
 <!-- نافذة الحجز -->
 <dialog id="dlg" class="rounded-2xl p-0 w-[92vw] max-w-md shadow-xl">
@@ -85,28 +86,36 @@ tailwind.config = { theme: { extend: {
     </label>
     <p class="text-xs text-slate-500">هذا طلب مبدئي، وتؤكد العيادة الموعد معك عبر الهاتف.</p>
     <div class="flex gap-2">
-      <button type="submit" class="flex-1 rounded-xl bg-mint-600 hover:bg-mint-700 text-white font-semibold py-2.5">إرسال الطلب</button>
+      <button id="sendBtn" type="submit" class="flex-1 rounded-xl bg-mint-600 hover:bg-mint-700 text-white font-semibold py-2.5">إرسال الطلب</button>
       <button type="button" id="cancel" class="rounded-xl bg-slate-100 hover:bg-slate-200 px-5 py-2.5">إلغاء</button>
     </div>
   </form>
+  <div id="bookDone" class="hidden p-5 space-y-4">
+    <h2 class="text-lg font-bold text-mint-700">تم استلام طلبك</h2>
+    <p class="text-sm text-slate-600">حالة الطلب: قيد الانتظار. لتسريع التأكيد أرسل تفاصيل الحجز مباشرة إلى العيادة.</p>
+    <a id="waLink" target="_blank" rel="noopener" class="block text-center rounded-xl bg-mint-600 hover:bg-mint-700 text-white font-semibold py-2.5">إرسال تفاصيل الحجز عبر واتساب</a>
+    <button type="button" id="closeDone" class="w-full rounded-xl bg-slate-100 hover:bg-slate-200 py-2.5">إغلاق</button>
+  </div>
 </dialog>
 
 <div id="toast" class="fixed bottom-5 inset-x-0 mx-auto w-fit max-w-[90vw] bg-brand-900 text-white text-sm rounded-xl px-4 py-3 shadow-lg hidden" role="status"></div>
 
-<script>
-/* ===== بيانات تجريبية ===== */
+<script type="module">
+import { collection, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { db, FIREBASE_READY } from "./firebase-config.js";
+/* ===== بيانات تجريبية (تُستخدم احتياطياً إذا لم يُضبط Firebase) ===== */
 // days: 0=الأحد ... 6=السبت | shifts: [بداية, نهاية] بتوقيت 24 ساعة
-const CLINICS = [
-  { id:1, type:"عيادة", name:"د. ريم العلي", specialty:"أطفال", province:"دمشق", district:"المزة - فيلات غربية",
+let CLINICS = [
+  { id:"c1", type:"عيادة", name:"د. ريم العلي", specialty:"أطفال", province:"دمشق", district:"المزة - فيلات غربية",
     address:"بناء الشفاء، الطابق الثاني، قرب جامع الإيمان", days:[6,0,1,2,3], shifts:[["16:00","20:00"]],
     phone:"+963112345601", whatsapp:"963944000001" },
-  { id:2, type:"عيادة", name:"د. محمد الخطيب", specialty:"عظمية", province:"حلب", district:"الفرقان",
+  { id:"c2", type:"عيادة", name:"د. محمد الخطيب", specialty:"عظمية", province:"حلب", district:"الفرقان",
     address:"شارع الفرقان الرئيسي، مقابل صيدلية الأمل", days:[6,0,1,2,3,4], shifts:[["10:00","14:00"],["17:00","20:00"]],
     phone:"+963212345602", whatsapp:"963944000002" },
-  { id:3, type:"عيادة", name:"د. هالة حداد", specialty:"عيون", province:"حمص", district:"الحمراء",
+  { id:"c3", type:"عيادة", name:"د. هالة حداد", specialty:"عيون", province:"حمص", district:"الحمراء",
     address:"شارع الحمراء، بناء النور، الطابق الأول", days:[0,1,2,3,4], shifts:[["09:00","13:00"]],
     phone:"+963312345603", whatsapp:"963944000003" },
-  { id:4, type:"مخبر", name:"مخبر الشام للتحاليل الطبية", specialty:"تحاليل مخبرية", province:"اللاذقية", district:"الزراعة",
+  { id:"c4", type:"مخبر", name:"مخبر الشام للتحاليل الطبية", specialty:"تحاليل مخبرية", province:"اللاذقية", district:"الزراعة",
     address:"شارع الجمهورية، بجانب مشفى الأسد الجامعي", days:[6,0,1,2,3,4,5], shifts:[["07:00","15:00"]],
     phone:"+963412345604", whatsapp:"963944000004" }
 ];
@@ -121,10 +130,12 @@ function nowInDamascus() {
   const day = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(p.weekday);
   return { day, min: (+p.hour % 24) * 60 + +p.minute };
 }
+const todayDamascus = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Damascus" }).format(new Date());
 const toMin = t => { const [h,m] = t.split(":").map(Number); return h*60+m; };
 const fmt12 = t => { let [h,m] = t.split(":").map(Number); const s = h>=12 ? "م" : "ص"; h = h%12 || 12; return `${h}:${String(m).padStart(2,"0")} ${s}`; };
 
 function isOpen(c) {
+  if (c.closedDate === todayDamascus()) return false;
   const n = nowInDamascus();
   return c.days.includes(n.day) && c.shifts.some(([a,b]) => n.min >= toMin(a) && n.min < toMin(b));
 }
@@ -150,8 +161,10 @@ const norm = s => s.replace(/[ًٌٍَُِّْ]/g,"").replace(/[أإآ]/g,"ا").
 
 /* ===== العرض ===== */
 function card(c) {
-  const open = isOpen(c);
-  const badge = open
+  const open = isOpen(c), shut = c.closedDate === todayDamascus();
+  const badge = shut
+    ? `<span class="inline-flex items-center gap-1.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold px-2.5 py-1"><span class="w-2 h-2 rounded-full bg-red-500"></span>مغلقة اليوم</span>`
+    : open
     ? `<span class="inline-flex items-center gap-1.5 rounded-full bg-mint-100 text-mint-700 text-xs font-semibold px-2.5 py-1"><span class="w-2 h-2 rounded-full bg-mint-600"></span>مفتوح الآن</span>`
     : `<span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold px-2.5 py-1"><span class="w-2 h-2 rounded-full bg-slate-400"></span>مغلق</span>`;
   return `
@@ -163,6 +176,7 @@ function card(c) {
       </div>
       ${badge}
     </div>
+    ${shut ? `<p role="alert" class="rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm font-medium px-3 py-2">العيادة مغلقة اليوم لظرف طارئ. يرجى عدم التوجه إليها، ويمكنك طلب حجز ليوم آخر.</p>` : ""}
     <p class="text-sm text-slate-600"><span class="font-semibold">${c.province}</span> - ${c.district}<br><span class="text-slate-500">${c.address}</span></p>
     <p class="text-sm bg-brand-50 rounded-xl px-3 py-2"><span class="font-semibold">الدوام:</span> ${daysText(c.days)}<br>${hoursText(c.shifts)}</p>
     <div class="grid grid-cols-3 gap-2 mt-auto pt-1">
@@ -188,26 +202,52 @@ setInterval(render, 60000);                      // تحديث حالة الدو
 
 /* ===== الحجز ===== */
 let current = null;
+const waText = (c, r) => `مرحباً، أود حجز دور مبدئي لدى ${c.name}.\nالاسم: ${r.name}\nالهاتف: ${r.phone}\nالتاريخ المفضل: ${r.date}\n(عبر تطبيق طبيبي)`;
 $("list").addEventListener("click", e => {
   const b = e.target.closest("[data-book]"); if (!b) return;
-  current = CLINICS.find(c => c.id === +b.dataset.book);
+  current = CLINICS.find(c => c.id === b.dataset.book);
   $("dlgFor").textContent = `${current.name} - ${current.specialty}`;
+  $("bookForm").classList.remove("hidden"); $("bookDone").classList.add("hidden");
   $("bDate").min = new Date().toISOString().split("T")[0];
   $("dlg").showModal();
 });
-$("cancel").onclick = () => $("dlg").close();
-$("bookForm").addEventListener("submit", e => {
+$("cancel").onclick = $("closeDone").onclick = () => $("dlg").close();
+$("bookForm").addEventListener("submit", async e => {
   e.preventDefault();
-  const req = { clinicId: current.id, name: $("bName").value, phone: $("bPhone").value, date: $("bDate").value, at: Date.now() };
-  try { const all = JSON.parse(localStorage.getItem("tabibi_requests") || "[]"); all.push(req); localStorage.setItem("tabibi_requests", JSON.stringify(all)); } catch(_) {}
-  $("dlg").close(); $("bookForm").reset();
-  toast(`تم إرسال طلبك إلى ${current.name}. ستتصل بك العيادة للتأكيد.`);
+  const r = { name: $("bName").value.trim(), phone: $("bPhone").value.trim(), date: $("bDate").value };
+  const btn = $("sendBtn"); btn.disabled = true; btn.textContent = "جارٍ الإرسال…";
+  try {
+    if (!FIREBASE_READY) throw new Error("Firebase غير مضبوط");
+    await addDoc(collection(db, "appointments"), {
+      clinicId: current.id, doctorName: current.name, ...r, status: "pending", createdAt: serverTimestamp()
+    });
+    $("waLink").href = `https://wa.me/${current.whatsapp}?text=${encodeURIComponent(waText(current, r))}`;
+    $("bookForm").classList.add("hidden"); $("bookDone").classList.remove("hidden"); $("bookForm").reset();
+  } catch (err) {
+    console.error(err);
+    toast(`تعذّر إرسال الطلب (${err.code || err.message}). تحقق من الاتصال وحاول مجدداً.`);
+  } finally { btn.disabled = false; btn.textContent = "إرسال الطلب"; }
 });
-function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.remove("hidden"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.add("hidden"), 4000); }
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.remove("hidden"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.add("hidden"), 4500); }
+
+/* ===== تحميل العيادات من Firestore ===== */
+function loadClinics() {
+  if (!FIREBASE_READY) return;
+  onSnapshot(collection(db, "clinics"), snap => {      // تحديث مباشر (مثل إغلاق العيادة طارئاً)
+    const list = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(c => c.active !== false)
+      // Firestore لا يقبل مصفوفة داخل مصفوفة، لذا تُخزَّن الفترات نصاً مثل "16:00-20:00"
+      .map(c => ({ ...c, shifts: (c.shifts || []).map(x => Array.isArray(x) ? x : String(x).split("-").map(t => t.trim())) }));
+    if (!list.length) return;
+    CLINICS = list;
+    const v = $("spec").value;
+    fillSelect($("spec"), "كل التخصصات", uniq("specialty")); $("spec").value = v;
+    render();
+  }, err => { console.warn(err); toast(`تعذّر تحميل العيادات من الخادم (${err.code || err.message}) — تُعرض بيانات تجريبية.`); });
+}
 
 render();
+loadClinics();
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 </body>
 </html>
- 
